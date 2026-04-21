@@ -1,15 +1,16 @@
-"""GET/POST /  — lightweight HTML form for field check-ins."""
+"""GET/POST /  — lightweight HTML form for field check-ins"""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from ..config import StrategyName, settings
 from ..db import get_session
+from ..models import LocationUpdate
 from ..schemas import InboundMessage
 from ..services.ingest import ingest
 from ..templating import templates
@@ -19,23 +20,36 @@ router = APIRouter()
 
 
 @router.get("/", response_class=HTMLResponse)
-def get_form(request: Request) -> HTMLResponse:
+def get_form(
+    request: Request,
+    ok: int | None = None,
+    ident: str | None = None,
+    session: Session = Depends(get_session),
+) -> HTMLResponse:
+    """Render a blank form. If ``?ok=<id>`` is present, show the card for that update."""
+    result = session.get(LocationUpdate, ok) if ok else None
+    # Keep the identifier primed for back-to-back check-ins by the same user;
+    # everything else (location/time) stays blank.
+    prefill = {"identifier": ident or ""}
     return templates.TemplateResponse(
         request,
         "form.html",
-        {"result": None, "prefill": {}, "default_strategy": settings.default_strategy},
+        {
+            "result": result,
+            "prefill": prefill,
+            "default_strategy": settings.default_strategy,
+        },
     )
 
 
-@router.post("/", response_class=HTMLResponse)
+@router.post("/")
 def post_form(
-    request: Request,
     identifier: str = Form(...),
     location: str = Form(...),
     observed_at: str | None = Form(default=None),
     strategy: StrategyName = Form(default=settings.default_strategy),
     session: Session = Depends(get_session),
-) -> HTMLResponse:
+) -> RedirectResponse:
     try:
         when = parse_iso_utc(observed_at) or datetime.now(tz=UTC)
     except (ValueError, TypeError) as e:
@@ -48,12 +62,9 @@ def post_form(
         source="form",
     )
     upd = ingest(session, msg, strategy_name=strategy)
-    return templates.TemplateResponse(
-        request,
-        "form.html",
-        {
-            "result": upd,
-            "prefill": {"identifier": identifier, "strategy": strategy},
-            "default_strategy": settings.default_strategy,
-        },
+    # 303 "See Other" — RFC-specified PRG: tells the browser to fetch the Location
+    # with GET, regardless of the original method. See the module docstring.
+    return RedirectResponse(
+        url=f"/?ok={upd.id}&ident={identifier}",
+        status_code=303,
     )

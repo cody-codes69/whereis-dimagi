@@ -4,14 +4,50 @@ def test_form_get(client):
     assert "Where are you" in r.text
 
 
-def test_form_post_records_update(client):
-    r = client.post("/", data={"identifier": "nick@dimagi.com", "location": "Dodoma"})
-    assert r.status_code == 200
-    assert "Dodoma" in r.text
+def test_form_post_redirects_prg(client):
+    """POST /  → 303 See Other → GET /?ok=<id>&ident=... (Post/Redirect/Get)."""
+    r = client.post(
+        "/",
+        data={"identifier": "nick@dimagi.com", "location": "Dodoma"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    loc = r.headers["location"]
+    assert loc.startswith("/?ok=")
+    assert "ident=nick%40dimagi.com" in loc or "ident=nick@dimagi.com" in loc
 
-    # Time-travel query picks it up.
-    r2 = client.get("/whereis/nick@dimagi.com")
-    assert "Dodoma" in r2.text
+    # Following the redirect renders the success card AND a blank location field.
+    r2 = client.get(loc)
+    assert r2.status_code == 200
+    assert "Dodoma" in r2.text            # shown in the result card
+    # Location input is empty — refresh here cannot re-submit.
+    loc_idx = r2.text.find('name="location"')
+    assert loc_idx != -1
+    assert 'value=""' in r2.text[loc_idx : loc_idx + 250] or \
+           'value="' not in r2.text[loc_idx : loc_idx + 250]
+
+    # Time-travel query still picks it up.
+    r3 = client.get("/whereis/nick@dimagi.com")
+    assert "Dodoma" in r3.text
+
+
+def test_form_refresh_after_submit_does_not_resubmit(client):
+    """Refreshing /?ok=<id> must NOT create another LocationUpdate."""
+    r = client.post(
+        "/",
+        data={"identifier": "dup@dimagi.com", "location": "Dodoma"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    result_url = r.headers["location"]
+
+    # Simulate the user hitting refresh five times.
+    for _ in range(5):
+        client.get(result_url)
+
+    count = client.get("/whereis.json").json()
+    dup_rows = [row for row in count if row["identifier"] == "dup@dimagi.com"]
+    assert len(dup_rows) == 1, "PRG should leave exactly one row for the user"
 
 
 def test_api_batch_tuple_format(client):

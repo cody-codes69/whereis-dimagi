@@ -62,7 +62,9 @@ new input channel is an adapter, not a core change.**
 
 ### Core
 
-- **Low-bandwidth HTML form** — ~5 KB, works with JavaScript disabled.
+- **Low-bandwidth HTML form** — ~5 KB, works with JavaScript disabled,
+  uses the **Post/Redirect/Get** pattern so refreshing never re-submits
+  and the back button never shows the "Confirm form resubmission" dialog.
 - **JSON API** — accepts both structured records and the exercise's
   array-of-tuples format `[[identifier, time, location], ...]`.
 - **SMS webhook** (`POST /webhooks/sms`) — Twilio-compatible, verifies
@@ -296,7 +298,7 @@ All environment variables are prefixed `WHEREIS_`. Copy `.env.example` to
 | Method + path | Purpose | Notes |
 |---|---|---|
 | `GET /` | HTML form | Works w/o JS |
-| `POST /` | Form submit | Fields: `identifier`, `location`, `observed_at?`, `strategy?` |
+| `POST /` | Form submit | Fields: `identifier`, `location`, `observed_at?`, `strategy?`. Responds **303 See Other** → `GET /?ok=<id>&ident=...` (PRG) |
 | `GET /whereis/{identifier}` | HTML "whereis X?" | `?at=<ISO>` for time-travel; `<meta name="whereis-status">` reflects state |
 | `GET /whereis.txt` | Plaintext dump | Tab-separated, `curl`-friendly |
 | `GET /whereis.json` | JSON dump | Machine-readable sibling of `.txt` |
@@ -511,7 +513,7 @@ For a step-by-step manual test walkthrough covering every endpoint, see
 | `sqlite3.OperationalError: no such table: places_fts` | You didn't run `make seed`. |
 | `make seed` fails to download | Check your connection; the dump is at `https://download.geonames.org/export/dump/cities15000.zip`. You can also seed by dropping the file into `data/cities15000.txt` manually. |
 | Webhooks return 401 | `WHEREIS_SHARED_SECRET` is set; clients must send `X-Shared-Secret`. |
-| SMS webhook returns 403 | `WHEREIS_TWILIO_VERIFY_SIGNATURE=true`. Either turn it off or send a valid `X-Twilio-Signature` HMAC of the POST body. |
+| SMS webhook returns 403 `invalid twilio signature` | You have `WHEREIS_SMS_ADAPTER=twilio` + `WHEREIS_TWILIO_VERIFY_SIGNATURE=true` in `.env`. The 403 body tells you exactly what to do: set `VERIFY_SIGNATURE=false`, switch to `simulator`, or sign the request (see `TESTING.md` §17b). |
 | IMAP poller silently does nothing | Your creds look like placeholders (contain `<`, `your-`, `app-password`, etc.) or are missing. See the `[imap] skipping poll loop` warning at startup. |
 | Map renders a gray box | No internet → tile CDN failed; Leaflet's `onerror` swaps in `static/map_fallback.png`. |
 | Tests fail with `ModuleNotFoundError: whereis` | You skipped `pip install -e .`; run `make install`. |

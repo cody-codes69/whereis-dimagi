@@ -22,19 +22,19 @@
     </div>
   {% endif %}
 
-  <form method="post" action="/">
+  <form method="post" action="/" autocomplete="off">
     <label>Your email or phone
       <input name="identifier" required placeholder="nick@dimagi.com or +15551234567"
+             autocomplete="username"
              value="{{ prefill.identifier or '' }}">
     </label>
     <label>Location
       <input name="location" required placeholder="Dodoma"
-             value="{{ prefill.location or '' }}">
+             autocomplete="off">
       <small>Accepts partial names (e.g. <code>Dod</code>) and regex (e.g. <code>/^San .*/</code>).</small>
     </label>
     <label>When (optional, ISO-8601; defaults to now UTC)
-      <input name="observed_at" placeholder="2011-05-19T14:05:00Z"
-             value="{{ prefill.observed_at or '' }}">
+      <input name="observed_at" placeholder="2011-05-19T14:05:00Z" autocomplete="off">
     </label>
     <label>Disambiguation
       {% set sel = prefill.strategy or default_strategy %}

@@ -45,7 +45,19 @@ async def sms_webhook(
     if settings.sms_adapter == "twilio" and settings.twilio_verify_signature:
         url = str(request.url)
         if not sms_twilio.verify_signature(url, payload, x_twilio_signature):
-            raise HTTPException(status_code=403, detail="invalid twilio signature")
+            # Be explicit about *why* we rejected — the single most common
+            # source of confusion when curling the webhook locally is forgetting
+            # that WHEREIS_TWILIO_VERIFY_SIGNATURE is on.
+            reason = "missing X-Twilio-Signature header" if not x_twilio_signature else "signature mismatch"
+            hint = (
+                "set WHEREIS_TWILIO_VERIFY_SIGNATURE=false for local curl, "
+                "or use WHEREIS_SMS_ADAPTER=simulator, "
+                "or sign the request (see TESTING.md §17b)."
+            )
+            raise HTTPException(
+                status_code=403,
+                detail=f"invalid twilio signature: {reason}. {hint}",
+            )
 
     adapter = _adapter()
     msg = adapter.to_message(payload)
