@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Whereis Dimagi{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">Whereis Dimagi</a>
+    <nav>
+      <a href="/">Form</a>
+      <a href="/map">Map</a>
+      <a href="/badges">Badges</a>
+      <a href="/whereis.txt">Plaintext</a>
+      <a href="/docs">API</a>
+    </nav>
+  </header>
+  <main>
+    {% block body %}{% endblock %}
+  </main>
+</body>
+</html>

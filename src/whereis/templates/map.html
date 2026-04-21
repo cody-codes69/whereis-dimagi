@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Map — Whereis Dimagi{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
+{% block body %}
+<section>
+  <h1>Field staff — latest known positions</h1>
+  <form method="get" action="/map">
+    <label>As of (optional ISO-8601)
+      <input name="at" value="{{ at or '' }}" placeholder="2011-05-20T00:00:00Z">
+    </label>
+    <button type="submit">View</button>
+  </form>
+
+  <div id="map" aria-label="Interactive map">
+    <noscript>
+      <div class="fallback">
+        JavaScript disabled — showing static snapshot.
+        <br><img src="/static/map_fallback.png" alt="Static world map" style="max-width:100%">
+      </div>
+    </noscript>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""
+          onerror="document.getElementById('map').innerHTML='<div class=&quot;fallback&quot;>Tiles unavailable — showing fallback.<br><img src=&quot;/static/map_fallback.png&quot; style=&quot;max-width:100%&quot;></div>'"></script>
+  <script>
+    (function() {
+      if (typeof L === 'undefined') return;
+      var map = L.map('map').setView([15, 20], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors', maxZoom: 10
+      }).addTo(map);
+      var pins = {{ pins | tojson }};
+      function esc(s) { return String(s).replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+      pins.forEach(function(p) {
+        if (p.lat == null) return;
+        var href = '/whereis/' + p.identifier_url;
+        L.marker([p.lat, p.lng]).addTo(map)
+          .bindPopup('<a href="' + href + '"><b>' + esc(p.identifier) + '</b></a><br>' +
+                     esc(p.where) + '<br><small>' + esc(p.observed_at) + '</small>');
+      });
+    })();
+  </script>
+</section>
+{% endblock %}

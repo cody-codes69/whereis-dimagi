@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Check in — Whereis Dimagi{% endblock %}
+{% block body %}
+<section>
+  <h1>Where are you?</h1>
+  <p class="muted">Low-bandwidth check-in. Works without JavaScript.</p>
+
+  {% if result %}
+    <div class="card {{ 'ok' if result.place else 'warn' }}">
+      <strong>
+        {% if result.place %}Recorded:{% else %}Accepted but no match:{% endif %}
+      </strong>
+      {{ result.identifier }} &middot;
+      {{ result.observed_at.strftime('%Y-%m-%d %H:%M UTC') }} &middot;
+      {% if result.place %}
+        {{ result.place.name }} ({{ result.place.country_code }})
+        — {{ "%.3f"|format(result.lat) }}, {{ "%.3f"|format(result.lng) }}
+      {% else %}
+        raw: "{{ result.raw_input }}"
+      {% endif %}
+      {% if result.warnings %}<div class="warn">warnings: {{ result.warnings|join(', ') }}</div>{% endif %}
+    </div>
+  {% endif %}
+
+  <form method="post" action="/">
+    <label>Your email or phone
+      <input name="identifier" required placeholder="nick@dimagi.com or +15551234567"
+             value="{{ prefill.identifier or '' }}">
+    </label>
+    <label>Location
+      <input name="location" required placeholder="Dodoma"
+             value="{{ prefill.location or '' }}">
+      <small>Accepts partial names (e.g. <code>Dod</code>) and regex (e.g. <code>/^San .*/</code>).</small>
+    </label>
+    <label>When (optional, ISO-8601; defaults to now UTC)
+      <input name="observed_at" placeholder="2011-05-19T14:05:00Z"
+             value="{{ prefill.observed_at or '' }}">
+    </label>
+    <label>Disambiguation
+      {% set sel = prefill.strategy or default_strategy %}
+      <select name="strategy">
+        <option value="population" {% if sel == 'population' %}selected{% endif %}>By largest population</option>
+        <option value="proximity"  {% if sel == 'proximity'  %}selected{% endif %}>Nearest to last-known location</option>
+        <option value="first"      {% if sel == 'first'      %}selected{% endif %}>First match</option>
+      </select>
+    </label>
+    <button type="submit">Check in</button>
+  </form>
+</section>
+{% endblock %}

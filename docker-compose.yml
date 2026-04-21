@@ -1,0 +1,29 @@
+services:
+  whereis:
+    build: .
+    ports:
+      - "8000:8000"
+    # Opt in to live providers by putting WHEREIS_* keys in ./.env; Compose
+    # forwards the file and per-key defaults below only take effect if the
+    # variable is neither in your shell env nor in .env.
+    env_file:
+      - path: ./.env
+        required: false
+    environment:
+      WHEREIS_DB_PATH: /data/whereis.db
+      WHEREIS_SMS_ADAPTER: ${WHEREIS_SMS_ADAPTER:-simulator}
+      WHEREIS_EMAIL_ADAPTER: ${WHEREIS_EMAIL_ADAPTER:-simulator}
+    volumes:
+      - whereis-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    command: >
+      sh -c "python -m whereis.data.loader &&
+             uvicorn whereis.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  whereis-data:

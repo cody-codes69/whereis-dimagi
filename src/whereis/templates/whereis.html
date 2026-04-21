@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Whereis {{ identifier }}?{% endblock %}
+{% block head %}
+  <meta name="whereis-status" content="{% if not person_known %}unknown{% elif update %}ok{% else %}stale{% endif %}">
+{% endblock %}
+{% block body %}
+<section>
+  <h1>Whereis {{ identifier }}?</h1>
+  {% if update %}
+    <p>
+      <strong>{{ update.place.name if update.place else update.raw_input }}</strong>
+      {% if update.place %} ({{ update.place.country_code }}){% endif %}
+      — {{ update.observed_at.strftime('%Y-%m-%d %H:%M UTC') }}
+    </p>
+    {% if update.lat is not none %}
+      <p class="muted">lat {{ "%.4f"|format(update.lat) }}, lng {{ "%.4f"|format(update.lng) }}</p>
+    {% endif %}
+    {% if update.warnings %}<p class="warn">warnings: {{ update.warnings|join(', ') }}</p>{% endif %}
+    <p class="muted">source: {{ update.source }} · confidence: {{ "%.2f"|format(update.match_confidence) }}</p>
+  {% elif not person_known %}
+    <p class="warn">We have never heard from <code>{{ identifier }}</code>.</p>
+  {% else %}
+    <p>No updates found for this identifier{% if at %} as-of {{ at }}{% endif %}.</p>
+  {% endif %}
+</section>
+{% endblock %}

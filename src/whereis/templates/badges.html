@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Badges — Whereis Dimagi{% endblock %}
+{% block body %}
+<section>
+  <h1>Field Staff Awards</h1>
+  {% if not badges %}
+    <p class="muted">No updates yet — check in first!</p>
+  {% endif %}
+  <table>
+    <thead><tr><th>Award</th><th>Winner</th><th>Value</th><th>Description</th></tr></thead>
+    <tbody>
+    {% for b in badges %}
+      <tr>
+        <td><span class="badge">{{ b.title }}</span></td>
+        <td>{{ b.winner }}</td>
+        <td>{{ b.value }}</td>
+        <td class="muted">{{ b.description }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
